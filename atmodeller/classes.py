@@ -186,7 +186,18 @@ class EquilibriumModel:
         )
         # Replace invalid values with -inf so they never win in the max
         max_less_than_max: Array = jnp.where(mask_num_steps, multi_sol.num_steps, -jnp.inf).max()
-        logger.info("Solver steps (max) = %s", int(max_less_than_max.item()))
+        if bool(jnp.isfinite(max_less_than_max).item()):
+            logger.info("Solver steps (max) = %d", int(max_less_than_max.item()))
+        else:
+            logger.warning("Solver steps (max) = n/a (no model solved below max_steps)")
+
+        if num_successful_models == 0:
+            raise RuntimeError(
+                "No multistart model converged "
+                f"({parameters.batch_size} attempt(s), solver_max_steps="
+                f"{parameters.solver_parameters.max_steps}); check the initial "
+                "condition (temperature, fO2, and real-gas EOS validity range)."
+            )
 
         self._output = OutputSolution(parameters, multi_sol.value, multi_sol)
 
